@@ -21,7 +21,7 @@ extension URL {
 struct MovieStatus {
 	let movieURL: URL
 	var isProcessing: Bool = false
-	var percentComplete: Double = 0.0
+	var progress: Double = 0.0
 	var id: String { movieURL.id }
 }
 
@@ -67,12 +67,12 @@ struct ContentView: View {
 	private func processMovie(movie: URL) async throws {
 		var movieStatus: MovieStatus = getMovieStatus(movieURL: movie)
 		movieStatus.isProcessing = true
-		movieStatus.percentComplete = 5.0
+		movieStatus.progress = 0.05
 		status[movie.id] = movieStatus
 
 		try await Task.sleep(nanoseconds: 2*1000*1000*1000)
 
-		status[movie.id]?.percentComplete = 100.0
+		status[movie.id]?.progress = 1.0
 	}
 
 	private func processMovies() async {
@@ -135,7 +135,8 @@ struct ContentView: View {
 				else {
 					ForEach(sortedMovieStatuses, id: \.self.id) {movieStatus in
 						HStack {
-							Text(String(movieStatus.percentComplete))
+							ProgressView(value:movieStatus.progress)
+								.frame(width: 100)
 							Text(movieStatus.movieURL.id)
 						}
 					}
