@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVFoundation
 import UniformTypeIdentifiers
 
 extension URL {
@@ -30,6 +31,7 @@ struct ContentView: View {
 	@State var movieURLs: [URL] = []
 	@State var isProcessing: Bool = false
 	@State var isCanceling: Bool = false
+	@State var processMoviesTask: Task<Any, Never>? = nil
 	@State var status: [String: MovieStatus] = [String: MovieStatus]()
 	private var sortedMovieURLs: [URL] {
 		return movieURLs.sorted(by: {return $0.absoluteString < $1.absoluteString})
@@ -37,18 +39,14 @@ struct ContentView: View {
 	private var sortedMovieStatuses: [MovieStatus] {
 		var output = [MovieStatus]()
 		for movie in sortedMovieURLs {
-			let status: MovieStatus = getMovieStatus(movieURL:movie)
-			output.append(status)
+			var stat: MovieStatus? = status[movie.id]
+			if stat == nil {
+				// report a simple "haven't started yet" status
+				stat = MovieStatus(movieURL: movie)
+			}
+			output.append(stat!)
 		}
 		return output
-	}
-
-	private func getMovieStatus(movieURL: URL) -> MovieStatus {
-		var theStatus: MovieStatus? = status[movieURL.id]
-		if theStatus == nil {
-			theStatus = MovieStatus(movieURL: movieURL)
-		}
-		return theStatus!
 	}
 
 	private func gatherMovieURLsFromFolderTree(folderURL: URL) {
@@ -64,25 +62,81 @@ struct ContentView: View {
 		}
 	}
 
-	private func processMovie(movie: URL) async throws {
-		var movieStatus: MovieStatus = getMovieStatus(movieURL: movie)
+	private func makeOutputURLFromInputURL(inputURL: URL) -> URL {
+		let fileNameNoExtension: String = inputURL.deletingPathExtension().lastPathComponent
+		let outputURL: URL = inputURL.deletingLastPathComponent()
+								.appendingPathComponent(fileNameNoExtension)
+								.appendingPathExtension(".mov")
+		return outputURL
+	}
+
+	private func hasFields(track: AVAssetTrack) -> Bool {
+		if track.mediaType != AVMediaType.video {
+			return false
+		}
+
+		for desc in track.formatDescriptions {
+			let fieldCountNum: NSNumber? =
+				CMFormatDescriptionGetExtension(
+					desc as! CMFormatDescription,
+					extensionKey: kCMFormatDescriptionExtension_FieldCount)
+					as? NSNumber
+			if fieldCountNum != nil {
+				if fieldCountNum!.intValue == 2 {
+					return true
+				}
+			}
+		}
+
+		return false
+	}
+
+	private func processMovie(movieURL: URL) async throws {
+		var movieStatus: MovieStatus = MovieStatus(movieURL: movieURL)
 		movieStatus.isProcessing = true
-		movieStatus.progress = 0.05
-		status[movie.id] = movieStatus
+		status[movieURL.id] = movieStatus
 
-		try await Task.sleep(nanoseconds: 2*1000*1000*1000)
+//		let outputMovieURL: URL = makeOutputURLFromInputURL(inputURL: movieURL)
+		let inputAsset: AVAsset = AVAsset(url: movieURL)
+		let assetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
+		if assetReader == nil {
+			status[movieURL.id]?.progress = 100.0
+			return
+		}
 
-		status[movie.id]?.progress = 1.0
+		let inputVideoTracks: [AVAssetTrack]? =
+			try? await inputAsset.loadTracks(withMediaType: AVMediaType.video)
+
+		if inputVideoTracks == nil || inputVideoTracks!.count < 1 {
+			status[movieURL.id]?.progress = 100.0
+			return
+		}
+
+		var inputVideoTrackHasFields: [Bool] = []
+		for vtrack in inputVideoTracks! {
+			inputVideoTrackHasFields.append(hasFields(track: vtrack))
+		}
+//		try await Task.sleep(nanoseconds: 500*1000*1000)
+//		status[movieURL.id]?.progress = 0.20
+//		try await Task.sleep(nanoseconds: 500*1000*1000)
+//		status[movieURL.id]?.progress = 0.40
+//		try await Task.sleep(nanoseconds: 500*1000*1000)
+//		status[movieURL.id]?.progress = 0.60
+//		try await Task.sleep(nanoseconds: 500*1000*1000)
+//		status[movieURL.id]?.progress = 0.80
+//		try await Task.sleep(nanoseconds: 500*1000*1000)
+		status[movieURL.id]?.progress = 1.0
+		return
 	}
 
 	private func processMovies() async {
-		for movie in sortedMovieURLs {
-		    if isCanceling {
+		for movieURL in sortedMovieURLs {
+			if Task.isCancelled {
 		        break
 		    }
 
 			do {
-				try await processMovie(movie: movie)
+				try await processMovie(movieURL: movieURL)
 			}
 			catch {
 			    // ignore failures and move on to next movie
@@ -113,7 +167,7 @@ struct ContentView: View {
 				Button("Process movies") {
 					isProcessing = true
 					message = "Processing movies:"
-					Task {
+					processMoviesTask = Task {
 						await processMovies()
 					}
 				}
@@ -121,6 +175,7 @@ struct ContentView: View {
 				.disabled(isProcessing || movieURLs.count == 0)
 				Button("Cancel processing") {
 					message = "Canceling..."
+					processMoviesTask?.cancel()
 					isCanceling = true
 				}
 				.buttonStyle(.bordered)
