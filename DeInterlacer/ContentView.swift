@@ -146,6 +146,7 @@ struct ContentView: View {
 
 	private func makeOutputURLFromInputURL(inputURL: URL) -> URL {
 		let fileNameNoExtension: String = inputURL.deletingPathExtension().lastPathComponent
+									+ "_deinterlaced"
 		let outputURL: URL = inputURL.deletingLastPathComponent()
 								.appendingPathComponent(fileNameNoExtension)
 								.appendingPathExtension("mov")
