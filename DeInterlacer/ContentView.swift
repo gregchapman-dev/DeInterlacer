@@ -28,7 +28,7 @@ extension AVAssetTrack {
 		if self.formatDescriptions.count < 1 {
 			return false
 		}
-		
+
 		// assume the first formatDescription is the one we're interested in
 		let desc: CMVideoFormatDescription = self.formatDescriptions[0] as! CMVideoFormatDescription
 		let fieldCountNum: NSNumber? = CMFormatDescriptionGetExtension(
@@ -38,7 +38,7 @@ extension AVAssetTrack {
 		if fieldCountNum != nil && fieldCountNum!.intValue == 2 {
 			return true
 		}
-		
+
 		if desc.mediaSubType == .dvcNTSC {
 			// 'dvc ' is an exception: it doesn't say it has fields, but it always does
 			return true
@@ -46,7 +46,7 @@ extension AVAssetTrack {
 
 		return false
 	}
-	
+
 	var fieldDuration: CMTime {
 		if self.hasFields {
 			let nfr = self.nominalFrameRate
@@ -59,7 +59,7 @@ extension AVAssetTrack {
 		}
 		return CMTime.invalid
 	}
-	
+
 	var topFieldComesFirst: Bool {
 		if self.mediaType != AVMediaType.video {
 			return false
@@ -67,7 +67,7 @@ extension AVAssetTrack {
 		if self.formatDescriptions.count < 1 {
 			return false
 		}
-		
+
 		// assume the first formatDescription is the one we're interested in
 		let desc: CMVideoFormatDescription = self.formatDescriptions[0] as! CMVideoFormatDescription
 		let fieldDetail: NSString? = CMFormatDescriptionGetExtension(
@@ -85,7 +85,7 @@ extension AVAssetTrack {
 		}
 		return false
 	}
-	
+
 	var videoDimensions: CMVideoDimensions? {
 		if self.mediaType != AVMediaType.video {
 			return nil
@@ -93,7 +93,7 @@ extension AVAssetTrack {
 		if self.formatDescriptions.count < 1 {
 			return nil
 		}
-		
+
 		// assume the first formatDescription is the one we're interested in
 		let desc: CMVideoFormatDescription = self.formatDescriptions[0] as! CMVideoFormatDescription
 		return CMVideoFormatDescriptionGetDimensions(desc)
@@ -152,7 +152,7 @@ struct ContentView: View {
 								.appendingPathExtension("mov")
 		return outputURL
 	}
-	
+
 	private func copyField(from: CVPixelBuffer, to: CVPixelBuffer, whichField: Int) {
 		// Assumptions: from and to are identically sized single plane pixel buffers,
 		// with format == kCVPixelFormatType_422YpCbCr8 (actually it will work for
@@ -162,122 +162,256 @@ struct ContentView: View {
 		let height = CVPixelBufferGetHeight(from) 		 // assumption: to's height is the same as from's
 		let width = CVPixelBufferGetWidth(from)			 // assumption: to's width is the same as from's
 		let rowBytes = CVPixelBufferGetBytesPerRow(from) // assumption: to's rowBytes is the same as from's
-		
+
 		let lineWidthInBytes = width * bytesPerPixel
 		let linesPerField = height / 2
-		
+
 		CVPixelBufferLockBaseAddress(from, .readOnly)
 		CVPixelBufferLockBaseAddress(to, CVPixelBufferLockFlags(rawValue: 0))
-		
+
 		var fromBase = CVPixelBufferGetBaseAddress(from)
 		var toBase = CVPixelBufferGetBaseAddress(to)
-		
+
 		if whichField == 1 {
 			// start a line into the frame
 			fromBase = fromBase! + rowBytes
 			toBase = toBase! + rowBytes
 		}
-		
+
 		for _ in 0 ..< linesPerField {
 			memcpy(toBase, fromBase, lineWidthInBytes)
 			// skip ahead two lines (to next line of field)
 			fromBase = fromBase! + rowBytes * 2
 			toBase = toBase! + rowBytes * 2
 		}
-		
+
 		CVPixelBufferUnlockBaseAddress(from, .readOnly);
 		CVPixelBufferUnlockBaseAddress(to, CVPixelBufferLockFlags(rawValue: 0));
 	}
-	
-	private func getUInt64(_ ptr: UnsafeMutableRawPointer) -> UInt64 {
+
+	private func loadUInt64(_ ptr: UnsafeMutableRawPointer) -> UInt64 {
 		let u64 = ptr.load(as: UInt64.self)
 		return u64
 	}
-	
-	private func setUInt64(_ ptr: UnsafeMutableRawPointer, value: UInt64) {
+
+	private func storeUInt64(_ ptr: UnsafeMutableRawPointer, value: UInt64) {
 		ptr.storeBytes(of: value, as: UInt64.self)
 	}
-	
+
 	private func interpolateField(_ fromto: CVPixelBuffer, fromField: Int, toField: Int) {
 		let bytesPerPixel: Int = 2	// assumption: two bytes per pixel
 		let height: Int = CVPixelBufferGetHeight(fromto)
 		let width: Int = CVPixelBufferGetWidth(fromto)
 		let rowBytes: Int = CVPixelBufferGetBytesPerRow(fromto)
-		
+
 		let lineWidthInBytes: Int = width * bytesPerPixel
 		let linesPerField: Int = height / 2
-		
+
 		CVPixelBufferLockBaseAddress(fromto, CVPixelBufferLockFlags(rawValue: 0))
 		let baseAddr: UnsafeMutableRawPointer = CVPixelBufferGetBaseAddress(fromto)!
-		
+
 		// First, copy the one line that has nothing to interpolate against:
+
 		// If we're interpolating from field 1 to field 0, copy the first line
 		// of field 1 into the first line of field 0 (because there's no earlier
 		// line in field 1 to interpolate against).
 		// If we're interpolating from field 0 to field 1, copy the last line
 		// of field 0 into the last line of field 1 (because there's no later
 		// line in field 0 to interpolate against).
-		
-		// Then, do the interpolation for all the other lines in toField.
-		
-		// We will process an Int64 (four pixels) at a time. This might run
-		// a little bit off the end of the width (if width is not a multiple
-		// of 4 pixels), but CVPixelBuffer rowBytes padding is always enough
-		// to allow this (rowBytes is always a multiple of 16; we only need
-		// it to be a multiple of 8).
-		let pixelsPerGroup: Int = 4
-		let bytesPerPixelGroup: Int = pixelsPerGroup * bytesPerPixel
- 		let numPixelGroups = lineWidthInBytes / bytesPerPixelGroup
-		
-		// point line at line to be produced
-		var linePtr: UnsafeMutableRawPointer
+
+		// Then, do the interpolation for all the other lines in toField:
+
+		// Lets get as close as we can to doing this on SIMD32<UInt8> data
+		// (32 bytes at a time, or 4 UInt64's at a time).  We'll do as many
+		// vertical swaths of this width as we can, then switch down to
+		// SIMD16<UInt8> (swaths that are 16 bytes wide; 2 UInt64's at a
+		// time), and then finally a swath that is one UInt64 wide to finish
+		// off if necessary.  Note that CVPixelBuffer width is always a multiple
+		// of 16 bytes, so we won't overrun buffer width.
+
+		// Four UInt64's at a time is max, since I need two operands and a result,
+		// so that's 12 UInt64's that are hopefully being allocated to registers,
+		// and there are only 13 general-purpose registers on ARM.  If we were
+		// actually using simd instructions here, I could do more at a time.
+
+		let startLinePtr: UnsafeMutableRawPointer
 		if toField == 0 {
 			// We already produced line 0 (we copied line 1), so skip that, and
 			// start writing at line 2
-			linePtr = baseAddr + (rowBytes * 2)
+			startLinePtr = baseAddr + (rowBytes * 2)
 		}
 		else {
 			// We already produced line height-1 (we copied line height-2), so
 			// so we can go ahead and start writing at line 1, as expected
-			linePtr = baseAddr + rowBytes
+			startLinePtr = baseAddr + rowBytes
 		}
+
 		// In both cases, we have already produced one of the lines, so we only
 		// need to produce linesPerField-1 lines.
-		let linesToInterpolate: Int = linesPerField-1
-		for _ in 0 ..< linesToInterpolate {
-			var pixelsPtr: UnsafeMutableRawPointer = linePtr
-			for _ in 0 ..< numPixelGroups {
+		let linesToProduce: Int = linesPerField-1
+
+		// First pass, 32 bytes at a time (4 UInt64s)
+		var bytesPerGroup: Int = 32
+		var numByteGroups = lineWidthInBytes / bytesPerGroup
+		var byteGroupOffset: Int = 0
+		var groupPtr: UnsafeMutableRawPointer = startLinePtr + byteGroupOffset
+
+		// Read SIMD32<UInt8> (four UInt64 values) from line above
+		var eightBytesAbove0: UInt64 = loadUInt64(groupPtr +  0 - rowBytes)
+		var eightBytesAbove1: UInt64 = loadUInt64(groupPtr +  8 - rowBytes)
+		var eightBytesAbove2: UInt64 = loadUInt64(groupPtr + 16 - rowBytes)
+		var eightBytesAbove3: UInt64 = loadUInt64(groupPtr + 24 - rowBytes)
+
+		// Read SIMD32<UInt8> (four UInt64 values) from line below
+		var eightBytesBelow0: UInt64 = loadUInt64(groupPtr +  0 + rowBytes)
+		var eightBytesBelow1: UInt64 = loadUInt64(groupPtr +  8 + rowBytes)
+		var eightBytesBelow2: UInt64 = loadUInt64(groupPtr + 16 + rowBytes)
+		var eightBytesBelow3: UInt64 = loadUInt64(groupPtr + 24 + rowBytes)
+
+		for _ in 0 ..< numByteGroups {
+			for _ in 0..<linesToProduce {
 				// This is kind of fun; we are trying to interpolate each byte of each pixel
 				// from the equivalent byte in the line above and the line below:
-				// 		pixelByte = (pixelAboveByte + pixelBelowByte) / 2
+				// 		pixelByte = (pixelByteAbove + pixelByteBelow) / 2
 				// Better to do the divide by two first, so we don't get a temporary
 				// overflow (that'll be super important in a minute):
-				//		pixelByte = pixelAboveByte/2 + pixelBelowByte/2
+				//		pixelByte = pixelByteAbove/2 + pixelByteBelow/2
 				// Right shift is quicker than integer divide:
-				//		pixelByte = (pixelAboveByte>>1) + (pixelBelowByte>>1)
+				//		pixelByte = (pixelByteAbove>>1) + (pixelByteBelow>>1)
 				// We can now do 8 bytes (four pixels) at a time:
-				//		fourPixels: UInt64 = ((fourPixelsAbove>>1) & 0x7f7f7f7f7f7f7f7f)
-				//								+ ((fourPixelsBelow>>1) & 0x7f7f7f7f7f7f7f7f)
+				//		eightBytes: UInt64 = ((eightBytesAbove>>1) & 0x7f7f7f7f7f7f7f7f)
+				//								+ ((eightBytesBelow>>1) & 0x7f7f7f7f7f7f7f7f)
 				// Note how we had to mask off the high bit of every byte, since that
 				// bit came in unwanted from the byte next door, during the right shift.
 				// Then when we add the two together, if there are any carries, they will
 				// appropriately land in that cleared bit (and never in the low bit of a
-				// neighboring byte).
-				
-				let fourPixelsAbove: UInt64 = getUInt64(pixelsPtr - rowBytes)
-				let fourPixelsBelow: UInt64 = getUInt64(pixelsPtr + rowBytes)
-				let fourPixels: UInt64 = ((fourPixelsAbove>>1) & 0x7f7f7f7f7f7f7f7f)
-											+ ((fourPixelsBelow>>1) & 0x7f7f7f7f7f7f7f7f)
-				setUInt64(pixelsPtr, value: fourPixels)
-				pixelsPtr = pixelsPtr + bytesPerPixelGroup
+				// neighboring byte).  We might should round (this code truncates), but
+				// that ruins the whole "we avoided byte overflow" thing, since you have
+				// to increment by 1 before the divide, and that might overflow.  And
+				// honestly, the rounding isn't _that_ important.
+
+				// If Swift ever supports SIMD more fully, the closest ARM and X86 simd
+				// instruction for this is (ARM) vhaddq_u8 (or vrhaddq_u8 if you want to
+				// round), and (X86) _mm_avg_epu8 (which rounds).
+
+				let eightBytes0: UInt64 = ((eightBytesAbove0>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow0>>1) & 0x7f7f7f7f7f7f7f7f)
+				let eightBytes1: UInt64 = ((eightBytesAbove1>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow1>>1) & 0x7f7f7f7f7f7f7f7f)
+				let eightBytes2: UInt64 = ((eightBytesAbove2>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow2>>1) & 0x7f7f7f7f7f7f7f7f)
+				let eightBytes3: UInt64 = ((eightBytesAbove3>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow3>>1) & 0x7f7f7f7f7f7f7f7f)
+
+				storeUInt64(groupPtr +  0, value: eightBytes0)
+				storeUInt64(groupPtr +  8, value: eightBytes1)
+				storeUInt64(groupPtr + 16, value: eightBytes2)
+				storeUInt64(groupPtr + 24, value: eightBytes3)
+
+				// Set up for next line in swath
+				groupPtr = groupPtr + (rowBytes * 2)
+
+				// Note how we avoid loading the line above a second time, since we already
+				// have it in (hopefully) four registers.
+				eightBytesAbove0 = eightBytesBelow0
+				eightBytesAbove1 = eightBytesBelow1
+				eightBytesAbove2 = eightBytesBelow2
+				eightBytesAbove3 = eightBytesBelow3
+
+				eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
+				eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
+				eightBytesBelow2 = loadUInt64(groupPtr + 16 + rowBytes)
+				eightBytesBelow3 = loadUInt64(groupPtr + 24 + rowBytes)
 			}
-			linePtr = linePtr + (rowBytes * 2)
+
+			// Set up for next swath (groupPtr moves back up to start line, but offset to the next group)
+			byteGroupOffset += bytesPerGroup
+			groupPtr = startLinePtr + byteGroupOffset
 		}
-		
+
+		// Second pass: vertical swaths 16 bytes wide
+		var remainingLineWidth = lineWidthInBytes - byteGroupOffset
+		bytesPerGroup = 16
+		numByteGroups = remainingLineWidth / bytesPerGroup
+		groupPtr = startLinePtr + byteGroupOffset
+
+		// Read SIMD16<UInt8> (two UInt64 values) from line above
+		eightBytesAbove0 = loadUInt64(groupPtr +  0 - rowBytes)
+		eightBytesAbove1 = loadUInt64(groupPtr +  8 - rowBytes)
+
+		// Read SIMD16<UInt8> (two UInt64 values) from line below
+		eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
+		eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
+
+		for _ in 0 ..< numByteGroups {
+			for _ in 0..<linesToProduce {
+				let eightBytes0: UInt64 = ((eightBytesAbove0>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow0>>1) & 0x7f7f7f7f7f7f7f7f)
+				let eightBytes1: UInt64 = ((eightBytesAbove1>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow1>>1) & 0x7f7f7f7f7f7f7f7f)
+
+				storeUInt64(groupPtr +  0, value: eightBytes0)
+				storeUInt64(groupPtr +  8, value: eightBytes1)
+
+				// Set up for next line in swath
+				groupPtr = groupPtr + (rowBytes * 2)
+
+				// Note how we avoid loading the line above a second time, since we already
+				// have it in (hopefully) four registers.
+				eightBytesAbove0 = eightBytesBelow0
+				eightBytesAbove1 = eightBytesBelow1
+
+				eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
+				eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
+			}
+
+			// Set up for next swath (groupPtr moves back up to start line, but offset to the next group)
+			byteGroupOffset += bytesPerGroup
+			groupPtr = startLinePtr + byteGroupOffset
+		}
+
+		// Third pass: vertical swaths 8 bytes wide
+		remainingLineWidth = lineWidthInBytes - byteGroupOffset
+		bytesPerGroup = 8
+		numByteGroups = remainingLineWidth / bytesPerGroup
+		if numByteGroups == 0 && remainingLineWidth > 0 {
+			// Run past the end a bit to get that last skinny swath. It's OK, because we're
+			// doing an 8 byte swath, and CVPixelBuffer width is always a multiple of 16.
+			numByteGroups = 1
+		}
+		groupPtr = startLinePtr + byteGroupOffset
+
+		// Read SIMD8<UInt8> (one UInt64 value) from line above
+		eightBytesAbove0 = loadUInt64(groupPtr - rowBytes)
+
+		// Read SIMD8<UInt8> (one UInt64 value) from line below
+		eightBytesBelow0 = loadUInt64(groupPtr + rowBytes)
+
+		for _ in 0 ..< numByteGroups {
+			for _ in 0..<linesToProduce {
+				let eightBytes0: UInt64 = ((eightBytesAbove0>>1) & 0x7f7f7f7f7f7f7f7f)
+											+ ((eightBytesBelow0>>1) & 0x7f7f7f7f7f7f7f7f)
+
+				storeUInt64(groupPtr, value: eightBytes0)
+
+				// Set up for next line in swath
+				groupPtr = groupPtr + (rowBytes * 2)
+
+				// Note how we avoid loading the line above a second time, since we already
+				// have it in (hopefully) four registers.
+				eightBytesAbove0 = eightBytesBelow0
+
+				eightBytesBelow0 = loadUInt64(groupPtr + rowBytes)
+			}
+
+			// Set up for next swath (groupPtr moves back up to start line, but offset to the next group)
+			byteGroupOffset += bytesPerGroup
+			groupPtr = startLinePtr + byteGroupOffset
+		}
+
 		CVPixelBufferUnlockBaseAddress(fromto, CVPixelBufferLockFlags(rawValue: 0));
 	}
 
-	
 	private func createFramesFromFields(frameWithTwoFields: CMSampleBuffer,
 										topFieldComesFirst: Bool,
 										pixelBufferPool: CVPixelBufferPool)
@@ -289,22 +423,22 @@ struct ContentView: View {
 
 		CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &firstFrameOptional)
 		CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferPool, &secondFrameOptional)
-		
+
 		let firstFrame = firstFrameOptional!
 		let secondFrame = secondFrameOptional!
-		
+
 		// Note: we identify fields by their first line number.  Top field is 0, bottom field is 1.
 		let firstTemporalField: Int = topFieldComesFirst ? 0 : 1
 		let secondTemporalField: Int = topFieldComesFirst ? 1 : 0
-		
+
 		// Make firstFrame from first temporal field
 		copyField(from: srcPixels, to: firstFrame, whichField: firstTemporalField)
 		interpolateField(firstFrame, fromField: firstTemporalField, toField: secondTemporalField)
-		
+
 		// Make secondFrame from second temporal field
 		copyField(from: srcPixels, to: secondFrame, whichField: secondTemporalField)
 		interpolateField(secondFrame, fromField: secondTemporalField, toField: firstTemporalField)
-		
+
 		return (firstFrame: firstFrame, secondFrame: secondFrame)
 	}
 
@@ -331,14 +465,14 @@ struct ContentView: View {
 			status[movieURL.id]?.progress = 1.0
 			return
 		}
-		
+
 		let fieldDuration: CMTime = inputVideoTrack.fieldDuration
 		let videoDimensions: CMVideoDimensions = inputVideoTrack.videoDimensions!
 		let topFieldComesFirst: Bool = inputVideoTrack.topFieldComesFirst
 
 		let outputMovieURL: URL = makeOutputURLFromInputURL(inputURL: movieURL)
 		try? FileManager().removeItem(at: outputMovieURL)
-		
+
 		let optionalAssetWriter: AVAssetWriter? =
 			try? AVAssetWriter(outputURL: outputMovieURL, fileType: AVFileType.mov)
 		if optionalAssetWriter == nil {
@@ -346,10 +480,10 @@ struct ContentView: View {
 			status[movieURL.id]?.progress = 1.0
 			return
 		}
-		
+
 		let assetWriter: AVAssetWriter = optionalAssetWriter!
 		assetWriter.shouldOptimizeForNetworkUse = true
-		
+
 		var assetWriterTrackFinishedSemaphores: [AVAssetWriterInput: DispatchSemaphore] = [:]
 
 		let videoSettings: [String: Any] = [
@@ -361,7 +495,7 @@ struct ContentView: View {
 			AVAssetWriterInput(mediaType: AVMediaType.video,
 							   outputSettings: videoSettings,
 							   sourceFormatHint: sourceFormatDesc)
-		
+
 		assetWriterTrackFinishedSemaphores[videoWriter] = DispatchSemaphore(value: 0)
 
 		let videoWriterAdapter: AVAssetWriterInputPixelBufferAdaptor =
@@ -374,7 +508,7 @@ struct ContentView: View {
 				])
 		assetWriter.add(videoWriter)
 		// .pixelFormat_422YpCbCr8
-		
+
 		let optionalAssetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
 		if optionalAssetReader == nil {
 			status[movieURL.id]?.success = false
@@ -390,16 +524,16 @@ struct ContentView: View {
 				String(kCVPixelBufferHeightKey): NSNumber(value: videoDimensions.height)
 			])
 		assetReader.add(videoReader)
-		
+
 		assetReader.startReading()
 		assetWriter.startWriting()
 		assetWriter.startSession(atSourceTime: CMTime.zero)
-		
+
 		let writerWantsMoreQueue = DispatchQueue(label: "writerWantsMoreQueue")
 
 		var pendingFrame2: CVPixelBuffer? = nil
 		var pendingFrame2PTS: CMTime = CMTime.invalid
-		
+
 		videoWriter.requestMediaDataWhenReady(on: writerWantsMoreQueue) {
 			while(videoWriter.isReadyForMoreMediaData) {
 				if pendingFrame2 != nil {
@@ -409,7 +543,7 @@ struct ContentView: View {
 					status[movieURL.id]?.progress = CMTimeGetSeconds(pendingFrame2PTS)/CMTimeGetSeconds(movieDuration)
 					continue
 				}
-				
+
 				// Get the next video sample buffer, generate two frames from the two fields,
 				// and append the first field (now a frame) to the output video track. Store
 				// the second field (now a frame) in pendingFrame2 to hand out the next time
@@ -426,7 +560,7 @@ struct ContentView: View {
 					pendingFrame2PTS = CMTimeAdd(samplePTS, fieldDuration)
 					continue
 				}
-				
+
 				videoWriter.markAsFinished()
 				assetWriterTrackFinishedSemaphores[videoWriter]!.signal()
 				break
@@ -436,11 +570,11 @@ struct ContentView: View {
 		for sema in assetWriterTrackFinishedSemaphores.values {
 			sema.wait()
 		}
-		
+
 		await assetWriter.finishWriting()
 		assetReader.cancelReading()
-		
-		
+
+
 //		try await Task.sleep(nanoseconds: 500*1000*1000)
 //		status[movieURL.id]?.progress = 0.20
 //		try await Task.sleep(nanoseconds: 500*1000*1000)
