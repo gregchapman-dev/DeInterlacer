@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		175C3FB9299C3C8B003F0102 /* MovieProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */; };
+		175C3FBB299C3E5B003F0102 /* FolderProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */; };
 		17FEFEE42825D74A009EA99E /* DeInterlacerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */; };
 		17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE52825D74A009EA99E /* ContentView.swift */; };
 		17FEFEE82825D74A009EA99E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 17FEFEE72825D74A009EA99E /* Assets.xcassets */; };
@@ -14,6 +16,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieProcessor.swift; sourceTree = "<group>"; };
+		175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderProcessor.swift; sourceTree = "<group>"; };
 		17AE2B4C2825E7E200D0E177 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		17FEFEE02825D74A009EA99E /* DeInterlacer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeInterlacer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeInterlacerApp.swift; sourceTree = "<group>"; };
@@ -56,6 +60,8 @@
 				17AE2B4C2825E7E200D0E177 /* Info.plist */,
 				17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */,
 				17FEFEE52825D74A009EA99E /* ContentView.swift */,
+				175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */,
+				175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */,
 				17FEFEE72825D74A009EA99E /* Assets.xcassets */,
 				17FEFEEC2825D74A009EA99E /* DeInterlacer.entitlements */,
 				17FEFEE92825D74A009EA99E /* Preview Content */,
@@ -141,7 +147,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				175C3FBB299C3E5B003F0102 /* FolderProcessor.swift in Sources */,
 				17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */,
+				175C3FB9299C3C8B003F0102 /* MovieProcessor.swift in Sources */,
 				17FEFEE42825D74A009EA99E /* DeInterlacerApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
