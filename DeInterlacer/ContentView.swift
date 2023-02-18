@@ -35,22 +35,13 @@ struct ContentView: View {
 		    }
 
 			do {
-                try await mproc.processMovie()
+                try await mproc.startMovieProcessing()
 			}
 			catch {
 			    // ignore failures and move on to next movie
 			}
 		}
 	}
-    
-    private func makeOutputFolderURLFromInputFolderURL(inputFolderURL: URL) -> URL
-    {
-        let parentFolder: URL = inputFolderURL.deletingLastPathComponent()
-        let outputLastPathComponent: String = inputFolderURL.lastPathComponent + "_deinterlaced"
-        let outputFolderURL = parentFolder.appendingPathComponent(outputLastPathComponent)
-        return outputFolderURL
-    }
-
 
 	var body: some View {
 		VStack {
@@ -59,8 +50,7 @@ struct ContentView: View {
 				// Handle url here
 				if url.isFileURL {
 					if url.hasDirectoryPath {
-                        let outputURL: URL = makeOutputFolderURLFromInputFolderURL(inputFolderURL: url)
-                        folderProcessor = FolderProcessor(inputFolderURL: url, outputFolderURL: outputURL)
+                        folderProcessor = FolderProcessor(inputFolderURL: url, outputFolderURL: nil)
                         if folderProcessor!.inputMovieURLs.count > 0 {
                             for i in 0..<folderProcessor!.inputMovieURLs.count {
                                 let inputURL: URL = folderProcessor!.inputMovieURLs[i]

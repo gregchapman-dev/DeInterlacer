@@ -8,15 +8,29 @@
 import Foundation
 import AVFoundation
 
-struct MovieStatus {
+class MovieStatus {
     let movieURL: URL
-    var isProcessing: Bool = false
+    var hasStarted: Bool = false
+    var hasCompleted: Bool = false
     var progress: Double = 0.0
-    var success: Bool = false // failure is shown as progress=1.0, success=False
+    var success: Bool = false // failure is shown as progress=1.0, success=false
 
     init(movieURL: URL) {
         self.movieURL = movieURL
     }
+    
+    var isProcessing: Bool {
+        return self.hasStarted && !self.hasCompleted
+    }
+    
+    var hasFailed: Bool {
+        return self.hasCompleted && !self.success
+    }
+    
+    var hasSucceeded: Bool {
+        return self.hasCompleted && self.success
+    }
+    
 }
 
 class MovieProcessor
@@ -24,20 +38,25 @@ class MovieProcessor
     let inputMovieURL: URL
     let outputMovieURL: URL
     var movieStatus: MovieStatus
+    private var writerCompletionQueue: DispatchQueue
 
     init(inputMovieURL: URL, outputMovieURL: URL) {
         self.inputMovieURL = inputMovieURL
         self.outputMovieURL = outputMovieURL
         self.movieStatus = MovieStatus(movieURL:inputMovieURL)
+        self.writerCompletionQueue = DispatchQueue(label: "writerCompletion")
     }
-
-    func processMovie() async throws {
-        movieStatus.isProcessing = true
+    
+    func startMovieProcessing() async throws {
+        if movieStatus.hasStarted {
+            // only allow one call to processMovie
+            return
+        }
+        movieStatus.hasStarted = true
 
         let inputAsset: AVAsset = AVAsset(url: inputMovieURL)
         let inputVideoTracks: [AVAssetTrack]? =
             try? await inputAsset.loadTracks(withMediaType: AVMediaType.video)
-        let movieDuration: CMTime = inputAsset.duration
 
         if inputVideoTracks == nil || inputVideoTracks!.count < 1 {
             movieStatus.success = false
@@ -52,7 +71,8 @@ class MovieProcessor
             movieStatus.progress = 1.0
             return
         }
-
+        
+        let videoTrackEndTime: CMTime = inputVideoTrack.timeRange.end
         let fieldDuration: CMTime = inputVideoTrack.fieldDuration
         let videoDimensions: CMVideoDimensions = inputVideoTrack.videoDimensions!
         let topFieldComesFirst: Bool = inputVideoTrack.topFieldComesFirst
@@ -85,13 +105,25 @@ class MovieProcessor
         let videoWriterAdapter: AVAssetWriterInputPixelBufferAdaptor =
             AVAssetWriterInputPixelBufferAdaptor(
                 assetWriterInput: videoWriter,
-                sourcePixelBufferAttributes: [
-                    String(kCVPixelBufferPixelFormatTypeKey): NSNumber(value: kCVPixelFormatType_422YpCbCr8),
-                    String(kCVPixelBufferWidthKey): NSNumber(value: videoDimensions.width),
-                    String(kCVPixelBufferHeightKey): NSNumber(value: videoDimensions.height)
-                ])
+                sourcePixelBufferAttributes: nil)
+//                sourcePixelBufferAttributes: [
+//                    String(kCVPixelBufferPixelFormatTypeKey): NSNumber(value: kCVPixelFormatType_422YpCbCr8),
+//                    String(kCVPixelBufferWidthKey): NSNumber(value: videoDimensions.width),
+//                    String(kCVPixelBufferHeightKey): NSNumber(value: videoDimensions.height)
+//                ])
         assetWriter.add(videoWriter)
         // .pixelFormat_422YpCbCr8
+        
+        var pixelBufferPool: CVPixelBufferPool? = nil
+        CVPixelBufferPoolCreate(nil,
+                                nil,
+                                [
+                                    String(kCVPixelBufferPixelFormatTypeKey): NSNumber(value: kCVPixelFormatType_422YpCbCr8),
+                                    String(kCVPixelBufferWidthKey): NSNumber(value: videoDimensions.width),
+                                    String(kCVPixelBufferHeightKey): NSNumber(value: videoDimensions.height)
+                                ] as CFDictionary,
+                                &pixelBufferPool)
+        assert(pixelBufferPool != nil)
 
         let optionalAssetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
         if optionalAssetReader == nil {
@@ -112,19 +144,31 @@ class MovieProcessor
         assetReader.startReading()
         assetWriter.startWriting()
         assetWriter.startSession(atSourceTime: CMTime.zero)
+        
+        // Sam, what the heck?!?  This assertion fails (and if I comment out the assertion, I crash below
+        // when I pass pixelBufferPool: videoWriterAdapter.pixelBufferPool! to self.createFramesFromFields.
+        // assert(videoWriterAdapter.pixelBufferPool != nil)
 
-        let writerWantsMoreQueue = DispatchQueue(label: "writerWantsMoreQueue")
+        let videoWriterWantsMoreQueue = DispatchQueue(label: "videoWriterWantsMore")
+        // let audioWriterWantsMoreQueue = DispatchQueue(label: "audioWriterWantsMore")
 
         var pendingFrame2: CVPixelBuffer? = nil
         var pendingFrame2PTS: CMTime = CMTime.invalid
 
-        videoWriter.requestMediaDataWhenReady(on: writerWantsMoreQueue) {
+        dispatchGroup.enter()
+        videoWriter.requestMediaDataWhenReady(on: videoWriterWantsMoreQueue) {
             while(videoWriter.isReadyForMoreMediaData) {
+                if Task.isCancelled {
+                    videoWriter.markAsFinished()
+                    self.movieStatus.success = false
+                    self.movieStatus.progress = 1.0
+                    dispatchGroup.leave()
+                    break
+                }
                 if pendingFrame2 != nil {
                     // Append the pending second field (now a frame) to the video track
                     videoWriterAdapter.append(pendingFrame2!, withPresentationTime: pendingFrame2PTS)
                     pendingFrame2 = nil
-                    self.movieStatus.progress = CMTimeGetSeconds(pendingFrame2PTS)/CMTimeGetSeconds(movieDuration)
                     continue
                 }
 
@@ -133,42 +177,40 @@ class MovieProcessor
                 // the second field (now a frame) in pendingFrame2 to hand out the next time
                 // the videoWriter wants more data.
                 let sample = videoReader.copyNextSampleBuffer()
-                if (sample != nil) {
-                    let frames = self.createFramesFromFields(
-                                        frameWithTwoFields: sample!,
-                                        topFieldComesFirst: topFieldComesFirst,
-                                        pixelBufferPool: videoWriterAdapter.pixelBufferPool!)
-                    let samplePTS: CMTime = CMSampleBufferGetOutputPresentationTimeStamp(sample!)
-                    videoWriterAdapter.append(frames.firstFrame, withPresentationTime: samplePTS)
-                    pendingFrame2 = frames.secondFrame
-                    pendingFrame2PTS = CMTimeAdd(samplePTS, fieldDuration)
-                    self.movieStatus.progress = CMTimeGetSeconds(samplePTS)/CMTimeGetSeconds(movieDuration)
-                    continue
+                if sample == nil {
+                    videoWriter.markAsFinished()
+                    self.movieStatus.success = true
+                    self.movieStatus.progress = 1.0
+                    self.movieStatus.hasCompleted = true
+                    dispatchGroup.leave()
+                    break
                 }
 
-                videoWriter.markAsFinished()
-                dispatchGroup.leave()
-                break
+                let frames = self.createFramesFromFields(
+                                        frameWithTwoFields: sample!,
+                                        topFieldComesFirst: topFieldComesFirst,
+                                        pixelBufferPool: pixelBufferPool!) // videoWriterAdapter.pixelBufferPool!)
+                let samplePTS: CMTime = CMSampleBufferGetOutputPresentationTimeStamp(sample!)
+                videoWriterAdapter.append(frames.firstFrame, withPresentationTime: samplePTS)
+                pendingFrame2 = frames.secondFrame
+                pendingFrame2PTS = CMTimeAdd(samplePTS, fieldDuration)
+                self.movieStatus.progress = CMTimeGetSeconds(samplePTS) / CMTimeGetSeconds(videoTrackEndTime)
             }
         }
 
-        dispatchGroup.wait() // is unavailable in an async context, but dispatchGroup.notify looks OK. WTF?!?
-        // dispatchGroup.notify(queue: writerWantsMoreQueue, work: DispatchWorkItem {})
-        
-        await assetWriter.finishWriting()
-        assetReader.cancelReading()
+//        audioWriter.requestMediaDataWhenReady(on: audioWriterWantsMoreQueue) {
+//            while(audioWriter.isReadyForMoreMediaData) {
+//            }
+//        }
 
-    //        try await Task.sleep(nanoseconds: 500*1000*1000)
-    //        movieStatus.progress = 0.20
-    //        try await Task.sleep(nanoseconds: 500*1000*1000)
-    //        movieStatus.progress = 0.40
-    //        try await Task.sleep(nanoseconds: 500*1000*1000)
-    //        movieStatus.progress = 0.60
-    //        try await Task.sleep(nanoseconds: 500*1000*1000)
-    //        movieStatus.progress = 0.80
-    //        try await Task.sleep(nanoseconds: 500*1000*1000)
-        movieStatus.success = true
-        movieStatus.progress = 1.0
+
+        dispatchGroup.notify(queue: self.writerCompletionQueue, work: DispatchWorkItem {
+            assetWriter.finishWriting(completionHandler: {
+                assetReader.cancelReading()
+                self.movieStatus.hasCompleted = true
+            })
+        })
+
         return
     }
 
