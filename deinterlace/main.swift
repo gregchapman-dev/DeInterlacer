@@ -105,6 +105,8 @@ let waitTask = Task {
 
 // and wait for that wait task to finish waiting...
 try await waitTask.value
-sleep(200)
+print("finished waiting in main")
+sleep(10)
+print("finished sleeping in main")
 exit(0)
 

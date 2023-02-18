@@ -50,9 +50,12 @@ class MovieProcessor
     func startMovieProcessing() async throws {
         if movieStatus.hasStarted {
             // only allow one call to processMovie
+            print("second call to startMovieProcessing is NOP: \(self.movieStatus.movieURL.id)")
             return
         }
         movieStatus.hasStarted = true
+        print("startMovieProcessing called: \(self.movieStatus.movieURL.id)")
+
 
         let inputAsset: AVAsset = AVAsset(url: inputMovieURL)
         let inputVideoTracks: [AVAssetTrack]? =
@@ -61,6 +64,8 @@ class MovieProcessor
         if inputVideoTracks == nil || inputVideoTracks!.count < 1 {
             movieStatus.success = false
             movieStatus.progress = 1.0
+            movieStatus.hasCompleted = true
+            print("input movie has no video track: \(self.movieStatus.movieURL.id)")
             return
         }
 
@@ -69,6 +74,8 @@ class MovieProcessor
         if !inputVideoTrack.hasFields {
             movieStatus.success = false
             movieStatus.progress = 1.0
+            movieStatus.hasCompleted = true
+            print("video track doesn't have fields: \(self.movieStatus.movieURL.id)")
             return
         }
         
@@ -84,6 +91,8 @@ class MovieProcessor
         if optionalAssetWriter == nil {
             movieStatus.success = false
             movieStatus.progress = 1.0
+            movieStatus.hasCompleted = true
+            print("assetWriter creation failed: \(self.movieStatus.movieURL.id)")
             return
         }
 
@@ -129,6 +138,8 @@ class MovieProcessor
         if optionalAssetReader == nil {
             movieStatus.success = false
             movieStatus.progress = 1.0
+            movieStatus.hasCompleted = true
+            print("assetReader creation failed: \(self.movieStatus.movieURL.id)")
             return
         }
         let assetReader: AVAssetReader = optionalAssetReader!
@@ -162,6 +173,7 @@ class MovieProcessor
                     videoWriter.markAsFinished()
                     self.movieStatus.success = false
                     self.movieStatus.progress = 1.0
+                    print("task was cancelled: \(self.movieStatus.movieURL.id)")
                     dispatchGroup.leave()
                     break
                 }
@@ -181,7 +193,7 @@ class MovieProcessor
                     videoWriter.markAsFinished()
                     self.movieStatus.success = true
                     self.movieStatus.progress = 1.0
-                    self.movieStatus.hasCompleted = true
+                    print("videoWriter successfully wrote all the video: \(self.movieStatus.movieURL.id)")
                     dispatchGroup.leave()
                     break
                 }
@@ -205,10 +217,15 @@ class MovieProcessor
 
 
         dispatchGroup.notify(queue: self.writerCompletionQueue, work: DispatchWorkItem {
-            assetWriter.finishWriting(completionHandler: {
+            print("dispatchGroup.notify workItem called: \(self.movieStatus.movieURL.id)")
+            let t = Task {
+                print("dispatchGroup.notify task starting: \(self.movieStatus.movieURL.id)")
+                await assetWriter.finishWriting()
+                print("assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
                 assetReader.cancelReading()
+                print("assetReader cancelled: \(self.movieStatus.movieURL.id)")
                 self.movieStatus.hasCompleted = true
-            })
+            }
         })
 
         return
