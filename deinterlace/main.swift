@@ -60,7 +60,6 @@ let folderProcessor = FolderProcessor(inputFolderURL: inputFolderURL, outputFold
 var movieProcessors: [MovieProcessor] = [MovieProcessor]()
 
 if folderProcessor.inputMovieURLs.count == 0 {
-    print("Input folder must have movies (recursively) in it")
     exit(1)
 }
     
@@ -106,7 +105,5 @@ let waitTask = Task {
 // and wait for that wait task to finish waiting...
 try await waitTask.value
 print("finished waiting in main")
-sleep(10)
-print("finished sleeping in main")
 exit(0)
 

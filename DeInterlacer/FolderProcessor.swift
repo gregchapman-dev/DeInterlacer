@@ -29,8 +29,7 @@ struct FolderProcessor
     
     init(inputFolderURL: URL, outputFolderURL: URL?) {
         var movieURLs: [URL] = []
-        let fm = FileManager()
-        let enumerator = fm.enumerator(
+        let enumerator = FileManager.default.enumerator(
             at: inputFolderURL,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: .skipsHiddenFiles)!
@@ -40,11 +39,24 @@ struct FolderProcessor
             }
         }
         
+        if movieURLs.count == 0 {
+            print("Input folder must have movies (recursively) in it.")
+            self.inputMovieURLs = []
+            self.outputMovieURLs = []
+            return
+        }
+        
         // sort
         movieURLs = movieURLs.sorted(by: {return $0.absoluteString < $1.absoluteString})
         
         // make sure output folder is NOT present, then create it
         let actualOutputFolderURL: URL = outputFolderURL ?? makeOutputFolderURLFromInputFolderURL(inputFolderURL: inputFolderURL)
+        if FileManager.default.fileExists(atPath: actualOutputFolderURL.path) {
+            print("Output folder \(actualOutputFolderURL.id) already exists, we will not overwrite it")
+            self.inputMovieURLs = []
+            self.outputMovieURLs = []
+            return
+        }
 
         // generate output URL list (and create any output folders necessary)
         var outputURLs: [URL] = []
@@ -73,8 +85,7 @@ private func makeOutputMovieURLFromInputMovieURL(inputURL: URL, inputFolderURL: 
     }
     
     // Create that folder if it doesn't already exist (and any parent folders as well)
-    let fm = FileManager.default
-    try! fm.createDirectory(at: outputMovieFolderURL, withIntermediateDirectories: true)
+    try! FileManager.default.createDirectory(at: outputMovieFolderURL, withIntermediateDirectories: true)
 
     // And then append the filename (but replace input extension with ".mov")
     let inputFileNameNoExtension: String = inputURL.deletingPathExtension().lastPathComponent

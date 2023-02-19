@@ -12,6 +12,8 @@
 		178BC37829A0070500555B21 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37729A0070500555B21 /* main.swift */; };
 		178BC37C29A007D200555B21 /* MovieProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */; };
 		178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */; };
+		178BC37F29A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
+		178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
 		17FEFEE42825D74A009EA99E /* DeInterlacerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */; };
 		17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE52825D74A009EA99E /* ContentView.swift */; };
 		17FEFEE82825D74A009EA99E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 17FEFEE72825D74A009EA99E /* Assets.xcassets */; };
@@ -35,6 +37,7 @@
 		175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderProcessor.swift; sourceTree = "<group>"; };
 		178BC37529A0070500555B21 /* deinterlace */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = deinterlace; sourceTree = BUILT_PRODUCTS_DIR; };
 		178BC37729A0070500555B21 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameDeinterlacer.swift; sourceTree = "<group>"; };
 		17AE2B4C2825E7E200D0E177 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		17FEFEE02825D74A009EA99E /* DeInterlacer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeInterlacer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeInterlacerApp.swift; sourceTree = "<group>"; };
@@ -94,8 +97,9 @@
 				17AE2B4C2825E7E200D0E177 /* Info.plist */,
 				17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */,
 				17FEFEE52825D74A009EA99E /* ContentView.swift */,
-				175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */,
 				175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */,
+				175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */,
+				178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */,
 				17FEFEE72825D74A009EA99E /* Assets.xcassets */,
 				17FEFEEC2825D74A009EA99E /* DeInterlacer.entitlements */,
 				17FEFEE92825D74A009EA99E /* Preview Content */,
@@ -156,7 +160,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1420;
-				LastUpgradeCheck = 1330;
+				LastUpgradeCheck = 1420;
 				TargetAttributes = {
 					178BC37429A0070500555B21 = {
 						CreatedOnToolsVersion = 14.2;
@@ -204,6 +208,7 @@
 			files = (
 				178BC37C29A007D200555B21 /* MovieProcessor.swift in Sources */,
 				178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */,
+				178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */,
 				178BC37829A0070500555B21 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -212,6 +217,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				178BC37F29A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */,
 				175C3FBB299C3E5B003F0102 /* FolderProcessor.swift in Sources */,
 				17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */,
 				175C3FB9299C3C8B003F0102 /* MovieProcessor.swift in Sources */,
@@ -227,6 +233,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 7CHD3H6SYF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
@@ -240,6 +247,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 7CHD3H6SYF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
@@ -281,6 +289,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -341,6 +350,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -367,9 +377,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DeInterlacer/DeInterlacer.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DeInterlacer/Preview Content\"";
 				DEVELOPMENT_TEAM = 7CHD3H6SYF;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -395,9 +407,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DeInterlacer/DeInterlacer.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DeInterlacer/Preview Content\"";
 				DEVELOPMENT_TEAM = 7CHD3H6SYF;
 				ENABLE_HARDENED_RUNTIME = YES;
