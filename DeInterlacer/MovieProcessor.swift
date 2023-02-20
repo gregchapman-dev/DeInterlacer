@@ -18,19 +18,19 @@ class MovieStatus {
     init(movieURL: URL) {
         self.movieURL = movieURL
     }
-    
+
     var isProcessing: Bool {
         return self.hasStarted && !self.hasCompleted
     }
-    
+
     var hasFailed: Bool {
         return self.hasCompleted && !self.success
     }
-    
+
     var hasSucceeded: Bool {
         return self.hasCompleted && self.success
     }
-    
+
 }
 
 class MovieProcessor
@@ -39,14 +39,30 @@ class MovieProcessor
     let outputMovieURL: URL
     var movieStatus: MovieStatus
     private var writerCompletionQueue: DispatchQueue
+    private var isCanceled: Bool
 
     init(inputMovieURL: URL, outputMovieURL: URL) {
         self.inputMovieURL = inputMovieURL
         self.outputMovieURL = outputMovieURL
         self.movieStatus = MovieStatus(movieURL:inputMovieURL)
         self.writerCompletionQueue = DispatchQueue(label: "writerCompletion")
+        self.isCanceled = false
     }
-    
+
+    func cancel() {
+        self.isCanceled = true
+    }
+
+    private func checkForCancellation() -> Bool {
+        if self.isCanceled {
+            movieStatus.success = false
+            movieStatus.progress = 1.0
+            print("movie processing canceled: \(self.movieStatus.movieURL.id)")
+            return true
+        }
+        return false
+    }
+
     func startMovieProcessing() async throws {
         if movieStatus.hasStarted {
             // only allow one call to processMovie
@@ -56,6 +72,10 @@ class MovieProcessor
         movieStatus.hasStarted = true
         print("startMovieProcessing called: \(self.movieStatus.movieURL.id)")
 
+        if checkForCancellation() {
+            movieStatus.hasCompleted = true
+            return
+        }
 
         let inputAsset: AVAsset = AVAsset(url: inputMovieURL)
         let inputVideoTracks: [AVAssetTrack]? =
@@ -78,7 +98,7 @@ class MovieProcessor
             print("video track doesn't have fields: \(self.movieStatus.movieURL.id)")
             return
         }
-        
+
         let videoTrackEndTime: CMTime = inputVideoTrack.timeRange.end
         let fieldDuration: CMTime = inputVideoTrack.fieldDuration
         let videoDimensions: CMVideoDimensions = inputVideoTrack.videoDimensions!
@@ -122,7 +142,7 @@ class MovieProcessor
 //                ])
         assetWriter.add(videoWriter)
         // .pixelFormat_422YpCbCr8
-        
+
         var pixelBufferPool: CVPixelBufferPool? = nil
         CVPixelBufferPoolCreate(nil,
                                 nil,
@@ -161,7 +181,7 @@ class MovieProcessor
         assetReader.startReading()
         assetWriter.startWriting()
         assetWriter.startSession(atSourceTime: CMTime.zero)
-        
+
         // Sam, what the heck?!?  This assertion fails (and if I comment out the assertion, I crash below
         // when I pass pixelBufferPool: videoWriterAdapter.pixelBufferPool! to self.createFramesFromFields.
         // assert(videoWriterAdapter.pixelBufferPool != nil)
@@ -171,17 +191,19 @@ class MovieProcessor
 
         var pendingFrame2: CVPixelBuffer? = nil
         var pendingFrame2PTS: CMTime = CMTime.invalid
-        
+
         let frameDeinterlacer = FrameDeinterlacer(pixelBufferPool:pixelBufferPool!)
+
+        if checkForCancellation() {
+            movieStatus.hasCompleted = true
+            return
+        }
 
         dispatchGroup.enter()
         videoWriter.requestMediaDataWhenReady(on: videoWriterWantsMoreQueue) {
             while(videoWriter.isReadyForMoreMediaData) {
-                if Task.isCancelled {
+                if self.checkForCancellation() {
                     videoWriter.markAsFinished()
-                    print("task was cancelled: \(self.movieStatus.movieURL.id)")
-                    self.movieStatus.success = false
-                    self.movieStatus.progress = 1.0
                     dispatchGroup.leave()
                     break
                 }
@@ -226,9 +248,15 @@ class MovieProcessor
 
         dispatchGroup.notify(queue: self.writerCompletionQueue, work: DispatchWorkItem {
             let _ = Task {
-                await assetWriter.finishWriting()
+                if self.isCanceled {
+                    assetWriter.cancelWriting()
+                    //print("assetWriter canceled: \(self.movieStatus.movieURL.id)")
+                }
+                else {
+                    await assetWriter.finishWriting()
+                    print("assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
+                }
                 assetReader.cancelReading()
-                print("assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
                 self.movieStatus.hasCompleted = true
             }
         })

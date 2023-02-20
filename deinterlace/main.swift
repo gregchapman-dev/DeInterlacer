@@ -32,7 +32,7 @@ for i in 1..<argv.count {
         // option processing
         continue
     }
-    
+
     // input folder, output folder
     if inputPath == nil {
         inputPath = arg
@@ -42,7 +42,7 @@ for i in 1..<argv.count {
         outputPath = arg
         continue
     }
-    
+
     // too many non-option arguments
 }
 
@@ -62,24 +62,26 @@ var movieProcessors: [MovieProcessor] = [MovieProcessor]()
 if folderProcessor.inputMovieURLs.count == 0 {
     exit(1)
 }
-    
+
 for i in 0..<folderProcessor.inputMovieURLs.count {
     let inputURL: URL = folderProcessor.inputMovieURLs[i]
     let outputURL: URL = folderProcessor.outputMovieURLs[i]
     movieProcessors.append(MovieProcessor(inputMovieURL: inputURL, outputMovieURL: outputURL))
 }
 
-let processMoviesTask = Task {
-    await startMoviesProcessing()
-}
-
 // make processing task cancelable with ctrl-C
-let signalCallback: sig_t = { signal in
+let signalCallback: sig_t = { _signal in
     print("Cancelling operations...")
-    processMoviesTask.cancel()
+    for mproc in movieProcessors {
+        //print("\tcancelling \(mproc.movieStatus.movieURL.id)")
+        mproc.cancel()
+    }
+    signal(SIGINT, signalCallback)
 }
 
 signal(SIGINT, signalCallback)
+
+await startMoviesProcessing()
 
 // now kick off the task that waits for all the processing to complete
 let waitTask = Task {
