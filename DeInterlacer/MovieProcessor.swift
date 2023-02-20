@@ -320,14 +320,13 @@ extension AVAssetTrack {
                                             desc,
                                             extensionKey: kCMFormatDescriptionExtension_FieldDetail)
                                        as? NSString
-        if fieldDetail == nil {
-            return false
-        }
-        if fieldDetail!.isEqual(kCMFormatDescriptionFieldDetail_TemporalTopFirst) {
-            return true
-        }
-        if fieldDetail!.isEqual(kCMFormatDescriptionFieldDetail_SpatialFirstLineEarly) {
-            return true
+        if let fieldDetail {
+            if fieldDetail.isEqual(kCMFormatDescriptionFieldDetail_TemporalTopFirst) {
+                return true
+            }
+            if fieldDetail.isEqual(kCMFormatDescriptionFieldDetail_SpatialFirstLineEarly) {
+                return true
+            }
         }
         return false
     }

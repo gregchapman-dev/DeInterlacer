@@ -53,8 +53,8 @@ if inputPath == nil {
 
 let inputFolderURL: URL = URL(fileURLWithPath: inputPath!)
 var outputFolderURL: URL? = nil
-if outputPath != nil {
-    outputFolderURL = URL(fileURLWithPath: outputPath!)
+if let outputPath {
+    outputFolderURL = URL(fileURLWithPath: outputPath)
 }
 let folderProcessor = FolderProcessor(inputFolderURL: inputFolderURL, outputFolderURL: outputFolderURL)
 var movieProcessors: [MovieProcessor] = [MovieProcessor]()

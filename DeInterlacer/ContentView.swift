@@ -91,8 +91,8 @@ struct ContentView: View {
 			}
 			List {
 				if !isProcessing {
-                    if folderProcessor != nil {
-                        ForEach(folderProcessor!.inputMovieURLs, id: \.self.id) { movieURL in
+                    if let folderProcessor {
+                        ForEach(folderProcessor.inputMovieURLs, id: \.self.id) { movieURL in
                             Text(movieURL.id)
                         }
                     }
