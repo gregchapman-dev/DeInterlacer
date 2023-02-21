@@ -124,12 +124,12 @@ class MovieProcessor
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.proRes422
         ]
-        let sourceFormatDesc: CMVideoFormatDescription
+        let sourceVideoFormatDesc: CMVideoFormatDescription
             = inputVideoTrack.formatDescriptions[0] as! CMVideoFormatDescription
         let videoWriter: AVAssetWriterInput =
             AVAssetWriterInput(mediaType: AVMediaType.video,
                                outputSettings: videoSettings,
-                               sourceFormatHint: sourceFormatDesc)
+                               sourceFormatHint: sourceVideoFormatDesc)
 
         let videoWriterAdapter: AVAssetWriterInputPixelBufferAdaptor =
             AVAssetWriterInputPixelBufferAdaptor(
@@ -160,6 +160,22 @@ class MovieProcessor
             return
         }
 
+        var audioWriters: [AVAssetWriterInput] = []
+        let inputAudioTracks: [AVAssetTrack]? =
+            try? await inputAsset.loadTracks(withMediaType: AVMediaType.audio)
+        if let inputAudioTracks {
+            for inputAudioTrack in inputAudioTracks {
+                let sourceAudioFormatDesc: CMAudioFormatDescription =
+                    inputAudioTrack.formatDescriptions[0] as! CMAudioFormatDescription
+                let audioWriter: AVAssetWriterInput =
+                    AVAssetWriterInput(mediaType: AVMediaType.audio,
+                                       outputSettings: nil,  // pass-through
+                                       sourceFormatHint: sourceAudioFormatDesc)
+                audioWriters.append(audioWriter)
+                assetWriter.add(audioWriter)
+            }
+        }
+
         let optionalAssetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
         if optionalAssetReader == nil {
             print("assetReader creation failed: \(self.movieStatus.movieURL.id)")
@@ -178,16 +194,29 @@ class MovieProcessor
             ])
         assetReader.add(videoReader)
 
+        var audioReaders: [AVAssetReaderTrackOutput] = []
+        if let inputAudioTracks {
+            for inputAudioTrack in inputAudioTracks {
+                let audioReader: AVAssetReaderTrackOutput = AVAssetReaderTrackOutput(
+                    track: inputAudioTrack,
+                    outputSettings: nil)
+                audioReaders.append(audioReader)
+                assetReader.add(audioReader)
+
+            }
+        }
+
         assetReader.startReading()
         assetWriter.startWriting()
         assetWriter.startSession(atSourceTime: CMTime.zero)
 
+        // assert(videoWriterAdapter.pixelBufferPool != nil)
         // Sam, what the heck?!?  This assertion fails (and if I comment out the assertion, I crash below
         // when I pass pixelBufferPool: videoWriterAdapter.pixelBufferPool! to self.createFramesFromFields.
-        // assert(videoWriterAdapter.pixelBufferPool != nil)
+        // I'm working around this by creating my own pixelBufferPool.
 
         let videoWriterWantsMoreQueue = DispatchQueue(label: "videoWriterWantsMore")
-        // let audioWriterWantsMoreQueue = DispatchQueue(label: "audioWriterWantsMore")
+        var audioWriterWantsMoreQueues: [DispatchQueue] = []
 
         var pendingFrame2: CVPixelBuffer? = nil
         var pendingFrame2PTS: CMTime = CMTime.invalid
@@ -240,10 +269,35 @@ class MovieProcessor
             }
         }
 
-//        audioWriter.requestMediaDataWhenReady(on: audioWriterWantsMoreQueue) {
-//            while(audioWriter.isReadyForMoreMediaData) {
-//            }
-//        }
+        // kick off processing of all the audio tracks
+        for idx in 0..<audioWriters.count {
+            audioWriterWantsMoreQueues.append(DispatchQueue(label: "audioWriterWantsMore\(idx)"))
+
+            let audioWriterWantsMoreQueue = audioWriterWantsMoreQueues[idx]
+            let audioWriter = audioWriters[idx]
+            let audioReader = audioReaders[idx]
+
+            dispatchGroup.enter()
+            audioWriter.requestMediaDataWhenReady(on: audioWriterWantsMoreQueue) {
+                while(audioWriter.isReadyForMoreMediaData) {
+                    if self.checkForCancellation() {
+                        audioWriter.markAsFinished()
+                        dispatchGroup.leave()
+                        break
+                    }
+
+                    let sample = audioReader.copyNextSampleBuffer()
+                    if sample == nil {
+                        audioWriter.markAsFinished()
+                        print("audioWriter\(idx) successfully wrote all the audio: \(self.movieStatus.movieURL.id)")
+                        dispatchGroup.leave()
+                        break
+                    }
+
+                    audioWriter.append(sample!)
+                }
+            }
+        }
 
 
         dispatchGroup.notify(queue: self.writerCompletionQueue, work: DispatchWorkItem {
