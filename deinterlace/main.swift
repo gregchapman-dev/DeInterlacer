@@ -7,14 +7,21 @@
 
 import Foundation
 
-private func startMoviesProcessing() async {
-    for mproc in await movieProcessors {
-        do {
-            try await mproc.startMovieProcessing()
+private func startSomeMoviesProcessing(movieProcessors: [MovieProcessor], numToStart: Int) async {
+    var numStarted: Int = 0
+    for mproc in movieProcessors {
+        if !mproc.movieStatus.hasStarted {
+            do {
+                try await mproc.startMovieProcessing()
+                numStarted += 1
+            }
+            catch {
+                // ignore failures and move on to next movie
+                print(mproc.inputMovieURL.id, " has failed to start processing.")
+            }
         }
-        catch {
-            // ignore failures and move on to next movie
-            print(mproc.inputMovieURL.id, " has failed to start processing.")
+        if numStarted == numToStart {
+            break
         }
     }
 }
@@ -76,30 +83,43 @@ let signalCallback: sig_t = { _signal in
         //print("\tcancelling \(mproc.movieStatus.movieURL.id)")
         mproc.cancel()
     }
-    signal(SIGINT, signalCallback)
 }
 
 signal(SIGINT, signalCallback)
 
-await startMoviesProcessing()
-
-// now kick off the task that waits for all the processing to complete
+// now kick off the task that waits for all the processing to complete (feeding new processors into the maw as needed)
 let waitTask = Task {
+    let pInfo: ProcessInfo = ProcessInfo.processInfo
+    let nCPUs: Int = pInfo.activeProcessorCount
+    print("nCPUs = \(nCPUs)")
+    let maxAtATime: Int = nCPUs
     let n: Double = Double(movieProcessors.count)
     var overallProgress: Double = 0.0
     var allDone: Bool = false
+    var numRunning: Int = 0
     while !allDone {
-        print("progress: \(overallProgress * 100.0)%")
-        try await Task.sleep(nanoseconds: 1000*1000*1000)
         var totalProgress: Double = 0.0
         allDone = true
+        numRunning = 0
         for mproc in movieProcessors {
             totalProgress += mproc.movieStatus.progress
             if !mproc.movieStatus.hasCompleted {
                 allDone = false
+                if mproc.movieStatus.hasStarted {
+                    // it has started, but has not completed. It's running.
+                    numRunning += 1
+                }
             }
         }
-        overallProgress = totalProgress / n
+        if !allDone {
+            overallProgress = totalProgress / n
+            let numToStart = maxAtATime - numRunning
+            if numToStart > 0 {
+                await startSomeMoviesProcessing(movieProcessors:movieProcessors, numToStart:numToStart)
+            }
+            try await Task.sleep(nanoseconds: 2*1000*1000*1000)
+        }
+        print("progress: \(overallProgress * 100.0)%, numRunning: \(numRunning)")
     }
     print("done waiting in waitTask")
 }

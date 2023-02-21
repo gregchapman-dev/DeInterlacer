@@ -24,8 +24,8 @@ class FrameDeinterlacer {
         CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.pixelBufferPool, &firstFrameOptional)
         CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, self.pixelBufferPool, &secondFrameOptional)
 
-        let firstFrame = firstFrameOptional!
-        let secondFrame = secondFrameOptional!
+        let firstFrame: CVPixelBuffer = firstFrameOptional!
+        let secondFrame: CVPixelBuffer = secondFrameOptional!
 
         // Note: we identify fields by their first line number.  Top field is 0, bottom field is 1.
         let firstTemporalField: Int = topFieldComesFirst ? 0 : 1
@@ -116,13 +116,17 @@ class FrameDeinterlacer {
 
         let startLinePtr: UnsafeMutableRawPointer
         if toField == 0 {
-            // We already produced line 0 (we copied line 1), so skip that, and
-            // start writing at line 2
+            // Produce line 0 (copy line 1), then set up to skip that, and
+            // start writing interpolated pixels at line 2
+            memcpy(baseAddr, baseAddr + rowBytes, lineWidthInBytes)
             startLinePtr = baseAddr + (rowBytes * 2)
         }
         else {
-            // We already produced line height-1 (we copied line height-2), so
-            // so we can go ahead and start writing at line 1, as expected
+            // Produce line height-1 (copy line height-2), the set up
+            // to start writing interpolated pixels at line 1
+            memcpy(baseAddr + (rowBytes * (height - 1)),
+                   baseAddr + (rowBytes * (height - 2)),
+                   lineWidthInBytes)
             startLinePtr = baseAddr + rowBytes
         }
 
@@ -149,7 +153,7 @@ class FrameDeinterlacer {
         var eightBytesBelow3: UInt64 = loadUInt64(groupPtr + 24 + rowBytes)
 
         for _ in 0 ..< numByteGroups {
-            for _ in 0..<linesToProduce {
+            for lineIdx in 0..<linesToProduce {
                 // This is kind of fun; we are trying to interpolate each byte of each pixel
                 // from the equivalent byte in the line above and the line below:
                 //         pixelByte = (pixelByteAbove + pixelByteBelow) / 2
@@ -188,25 +192,39 @@ class FrameDeinterlacer {
                 storeUInt64(groupPtr + 16, value: eightBytes2)
                 storeUInt64(groupPtr + 24, value: eightBytes3)
 
-                // Set up for next line in swath
-                groupPtr = groupPtr + (rowBytes * 2)
+                if lineIdx < linesToProduce - 1 {
+                    // Set up for next line in swath
+                    groupPtr = groupPtr + (rowBytes * 2)
 
-                // Note how we avoid loading the line above a second time, since we already
-                // have it in (hopefully) four registers.
-                eightBytesAbove0 = eightBytesBelow0
-                eightBytesAbove1 = eightBytesBelow1
-                eightBytesAbove2 = eightBytesBelow2
-                eightBytesAbove3 = eightBytesBelow3
-
-                eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
-                eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
-                eightBytesBelow2 = loadUInt64(groupPtr + 16 + rowBytes)
-                eightBytesBelow3 = loadUInt64(groupPtr + 24 + rowBytes)
+                    // Note how we avoid loading the line above a second time, since we already
+                    // have it in (hopefully) four registers.
+                    eightBytesAbove0 = eightBytesBelow0
+                    eightBytesAbove1 = eightBytesBelow1
+                    eightBytesAbove2 = eightBytesBelow2
+                    eightBytesAbove3 = eightBytesBelow3
+                    
+                    eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
+                    eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
+                    eightBytesBelow2 = loadUInt64(groupPtr + 16 + rowBytes)
+                    eightBytesBelow3 = loadUInt64(groupPtr + 24 + rowBytes)
+                }
             }
 
             // Set up for next swath (groupPtr moves back up to start line, but offset to the next group)
             byteGroupOffset += bytesPerGroup
             groupPtr = startLinePtr + byteGroupOffset
+
+            // Read SIMD32<UInt8> (four UInt64 values) from line above
+            eightBytesAbove0 = loadUInt64(groupPtr +  0 - rowBytes)
+            eightBytesAbove1 = loadUInt64(groupPtr +  8 - rowBytes)
+            eightBytesAbove2 = loadUInt64(groupPtr + 16 - rowBytes)
+            eightBytesAbove3 = loadUInt64(groupPtr + 24 - rowBytes)
+
+            // Read SIMD32<UInt8> (four UInt64 values) from line below
+            eightBytesBelow0 = loadUInt64(groupPtr +  0 + rowBytes)
+            eightBytesBelow1 = loadUInt64(groupPtr +  8 + rowBytes)
+            eightBytesBelow2 = loadUInt64(groupPtr + 16 + rowBytes)
+            eightBytesBelow3 = loadUInt64(groupPtr + 24 + rowBytes)
         }
 
         // Second pass: vertical swaths 16 bytes (2 UInt64s) wide
