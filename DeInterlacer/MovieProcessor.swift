@@ -321,8 +321,30 @@ class MovieProcessor
                 }
                 else {
                     print("\(self.elapsedTime()): start assetWriter.finishWriting: \(self.movieStatus.movieURL.id)")
+                    
                     await assetWriter.finishWriting()
-                    print("\(self.elapsedTime()): assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
+                    
+                    let st = assetWriter.status
+                    if st == .failed {
+                        print("\(self.elapsedTime()): assetWriter.finishWriting FAILED: \(self.movieStatus.movieURL.id)")
+                    }
+                    else if st == .completed {
+                        print("\(self.elapsedTime()): assetWriter.finishWriting completed: \(self.movieStatus.movieURL.id)")
+                    }
+                    else if st == .cancelled {
+                        print("\(self.elapsedTime()): assetWriter.finishWriting unexpectedly cancelled: \(self.movieStatus.movieURL.id)")
+                    }
+                    else if st == .writing {
+                        print("\(self.elapsedTime()): assetWriter.finishWriting finished, but assetWriter is still writing \(self.movieStatus.movieURL.id)")
+                    }
+                    else {
+                        print("\(self.elapsedTime()): assetWriter.finishWriting status unknown: \(self.movieStatus.movieURL.id)")
+                    }
+
+                    if let e=assetWriter.error {
+                        print("\(self.elapsedTime()): assetWriter error:", e)
+                    }
+
                 }
                 assetReader.cancelReading()
                 self.movieStatus.hasCompleted = true
