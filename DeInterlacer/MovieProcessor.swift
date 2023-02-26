@@ -40,6 +40,8 @@ class MovieProcessor
     var movieStatus: MovieStatus
     private var writerCompletionQueue: DispatchQueue
     private var isCanceled: Bool
+    let startTime: Double = Date().timeIntervalSince1970
+    var videoFramesWritten: Int64 = 0
 
     init(inputMovieURL: URL, outputMovieURL: URL) {
         self.inputMovieURL = inputMovieURL
@@ -62,15 +64,20 @@ class MovieProcessor
         }
         return false
     }
+    
+    private func elapsedTime() -> String {
+        let fElapsedTime: Double =  Date().timeIntervalSince1970 - self.startTime
+        return String(format: "%.3f", fElapsedTime)
+    }
 
     func startMovieProcessing() async throws {
         if movieStatus.hasStarted {
             // only allow one call to processMovie
-            print("second call to startMovieProcessing is NOP: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): second call to startMovieProcessing is NOP: \(self.movieStatus.movieURL.id)")
             return
         }
         movieStatus.hasStarted = true
-        print("startMovieProcessing called: \(self.movieStatus.movieURL.id)")
+        print("\(self.elapsedTime()): startMovieProcessing called: \(self.movieStatus.movieURL.id)")
 
         if checkForCancellation() {
             movieStatus.hasCompleted = true
@@ -85,7 +92,7 @@ class MovieProcessor
             movieStatus.success = false
             movieStatus.progress = 1.0
             movieStatus.hasCompleted = true
-            print("input movie has no video track: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): input movie has no video track: \(self.movieStatus.movieURL.id)")
             return
         }
 
@@ -95,7 +102,7 @@ class MovieProcessor
             movieStatus.success = false
             movieStatus.progress = 1.0
             movieStatus.hasCompleted = true
-            print("video track doesn't have fields: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): video track doesn't have fields: \(self.movieStatus.movieURL.id)")
             return
         }
 
@@ -112,7 +119,7 @@ class MovieProcessor
             movieStatus.success = false
             movieStatus.progress = 1.0
             movieStatus.hasCompleted = true
-            print("assetWriter creation failed: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): assetWriter creation failed: \(self.movieStatus.movieURL.id)")
             return
         }
 
@@ -153,7 +160,7 @@ class MovieProcessor
                                 ] as CFDictionary,
                                 &pixelBufferPool)
         if pixelBufferPool == nil {
-            print("pixel buffer pool creation failed: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): pixel buffer pool creation failed: \(self.movieStatus.movieURL.id)")
             movieStatus.success = false
             movieStatus.progress = 1.0
             movieStatus.hasCompleted = true
@@ -178,7 +185,7 @@ class MovieProcessor
 
         let optionalAssetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
         if optionalAssetReader == nil {
-            print("assetReader creation failed: \(self.movieStatus.movieURL.id)")
+            print("\(self.elapsedTime()): assetReader creation failed: \(self.movieStatus.movieURL.id)")
             movieStatus.success = false
             movieStatus.progress = 1.0
             movieStatus.hasCompleted = true
@@ -239,7 +246,12 @@ class MovieProcessor
                 if pendingFrame2 != nil {
                     // Append the pending second field (now a frame) to the video track
                     videoWriterAdapter.append(pendingFrame2!, withPresentationTime: pendingFrame2PTS)
+                    self.videoFramesWritten += 1
                     pendingFrame2 = nil
+                    if self.videoFramesWritten % 1800 == 0 {
+                        // 1800 frames at 60 fps is 30 seconds
+                        print("\(self.elapsedTime()): video frames written == \(self.videoFramesWritten): \(self.movieStatus.movieURL.id)")
+                    }
                     continue
                 }
 
@@ -250,7 +262,7 @@ class MovieProcessor
                 let sample = videoReader.copyNextSampleBuffer()
                 if sample == nil {
                     videoWriter.markAsFinished()
-                    print("videoWriter successfully wrote all the video: \(self.movieStatus.movieURL.id)")
+                    print("\(self.elapsedTime()): videoWriter successfully wrote all the video: \(self.movieStatus.movieURL.id)")
                     self.movieStatus.success = true
                     self.movieStatus.progress = 1.0
                     dispatchGroup.leave()
@@ -263,6 +275,7 @@ class MovieProcessor
                                         frameWithTwoFields: frameWithTwoFields,
                                         topFieldComesFirst: topFieldComesFirst)
                 videoWriterAdapter.append(frames.firstFrame, withPresentationTime: samplePTS)
+                self.videoFramesWritten += 1
                 pendingFrame2 = frames.secondFrame
                 pendingFrame2PTS = CMTimeAdd(samplePTS, fieldDuration)
                 self.movieStatus.progress = CMTimeGetSeconds(samplePTS) / CMTimeGetSeconds(videoTrackEndTime)
@@ -289,7 +302,7 @@ class MovieProcessor
                     let sample = audioReader.copyNextSampleBuffer()
                     if sample == nil {
                         audioWriter.markAsFinished()
-                        print("audioWriter\(idx) successfully wrote all the audio: \(self.movieStatus.movieURL.id)")
+                        print("\(self.elapsedTime()): audioWriter\(idx) successfully wrote all the audio: \(self.movieStatus.movieURL.id)")
                         dispatchGroup.leave()
                         break
                     }
@@ -304,11 +317,12 @@ class MovieProcessor
             let _ = Task {
                 if self.isCanceled {
                     assetWriter.cancelWriting()
-                    //print("assetWriter canceled: \(self.movieStatus.movieURL.id)")
+                    print("\(self.elapsedTime()): assetWriter CANCELLED: \(self.movieStatus.movieURL.id)")
                 }
                 else {
+                    print("\(self.elapsedTime()): start assetWriter.finishWriting: \(self.movieStatus.movieURL.id)")
                     await assetWriter.finishWriting()
-                    print("assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
+                    print("\(self.elapsedTime()): assetWriter.finishWriting all done: \(self.movieStatus.movieURL.id)")
                 }
                 assetReader.cancelReading()
                 self.movieStatus.hasCompleted = true
@@ -399,3 +413,9 @@ extension AVAssetTrack {
     }
 }
 
+
+extension Date {
+    func currentTimeMillis() -> Int64 {
+        return Int64(self.timeIntervalSince1970 * 1000)
+    }
+}

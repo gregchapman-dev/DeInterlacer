@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "178BC37429A0070500555B21"
-               BuildableName = "deinterlace"
-               BlueprintName = "deinterlace"
+               BlueprintIdentifier = "17FEFEDF2825D74A009EA99E"
+               BuildableName = "DeInterlacer.app"
+               BlueprintName = "DeInterlacer"
                ReferencedContainer = "container:DeInterlacer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -31,7 +31,7 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -39,34 +39,30 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES"
-      viewDebuggingEnabled = "No">
+      allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "178BC37429A0070500555B21"
-            BuildableName = "deinterlace"
-            BlueprintName = "deinterlace"
+            BlueprintIdentifier = "17B46FD729AC027E00F32333"
+            BuildableName = "moovcheck"
+            BlueprintName = "moovcheck"
             ReferencedContainer = "container:DeInterlacer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "17FEFEDF2825D74A009EA99E"
+            BuildableName = "DeInterlacer.app"
+            BlueprintName = "DeInterlacer"
+            ReferencedContainer = "container:DeInterlacer.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Users/gregc/Documents/simpleTestDV"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "/Users/gregc/Documents/AVWorkshop.test"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "/Users/gregc/Documents/AV\ Workshop /Volumes/GregBackupSSD/AV\ Workshop_deinterlaced"
+            argument = "/Volumes/GregBackupSSD/AV\ Workshop_deinterlaced"
             isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "/Users/gregc/Documents/AV\ Workshop /Users/gregc/Documents/AV\ Workshop_deinterlaced"
-            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>
@@ -80,9 +76,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "178BC37429A0070500555B21"
-            BuildableName = "deinterlace"
-            BlueprintName = "deinterlace"
+            BlueprintIdentifier = "17FEFEDF2825D74A009EA99E"
+            BuildableName = "DeInterlacer.app"
+            BlueprintName = "DeInterlacer"
             ReferencedContainer = "container:DeInterlacer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

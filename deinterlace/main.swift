@@ -92,7 +92,7 @@ let waitTask = Task {
     let pInfo: ProcessInfo = ProcessInfo.processInfo
     let nCPUs: Int = pInfo.activeProcessorCount
     print("nCPUs = \(nCPUs)")
-    let maxAtATime: Int = nCPUs
+    let maxAtATime: Int = nCPUs / 2  // using all the CPUs seems to slow things down a lot
     let n: Double = Double(movieProcessors.count)
     var overallProgress: Double = 0.0
     var allDone: Bool = false
@@ -119,7 +119,8 @@ let waitTask = Task {
             }
             try await Task.sleep(nanoseconds: 2*1000*1000*1000)
         }
-        print("progress: \(overallProgress * 100.0)%, numRunning: \(numRunning)")
+        let formattedProgress = String(format: "%.2f", overallProgress * 100.0)
+        print("progress: \(formattedProgress)%, numRunning: \(numRunning)")
     }
     print("done waiting in waitTask")
 }

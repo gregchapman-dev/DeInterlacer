@@ -14,6 +14,9 @@
 		178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */; };
 		178BC37F29A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
 		178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
+		17B46FDB29AC027F00F32333 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FDA29AC027F00F32333 /* main.swift */; };
+		17B46FE129AC02C800F32333 /* MovieChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FE029AC02C800F32333 /* MovieChecker.swift */; };
+		17B46FE329AC032C00F32333 /* FolderChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FE229AC032C00F32333 /* FolderChecker.swift */; };
 		17FEFEE42825D74A009EA99E /* DeInterlacerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */; };
 		17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17FEFEE52825D74A009EA99E /* ContentView.swift */; };
 		17FEFEE82825D74A009EA99E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 17FEFEE72825D74A009EA99E /* Assets.xcassets */; };
@@ -22,6 +25,15 @@
 
 /* Begin PBXCopyFilesBuildPhase section */
 		178BC37329A0070500555B21 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		17B46FD629AC027E00F32333 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -39,6 +51,10 @@
 		178BC37729A0070500555B21 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameDeinterlacer.swift; sourceTree = "<group>"; };
 		17AE2B4C2825E7E200D0E177 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		17B46FD829AC027E00F32333 /* moovcheck */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moovcheck; sourceTree = BUILT_PRODUCTS_DIR; };
+		17B46FDA29AC027F00F32333 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		17B46FE029AC02C800F32333 /* MovieChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieChecker.swift; sourceTree = "<group>"; };
+		17B46FE229AC032C00F32333 /* FolderChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderChecker.swift; sourceTree = "<group>"; };
 		17FEFEE02825D74A009EA99E /* DeInterlacer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeInterlacer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		17FEFEE32825D74A009EA99E /* DeInterlacerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeInterlacerApp.swift; sourceTree = "<group>"; };
 		17FEFEE52825D74A009EA99E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -49,6 +65,13 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		178BC37229A0070500555B21 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B46FD529AC027E00F32333 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -73,11 +96,22 @@
 			path = deinterlace;
 			sourceTree = "<group>";
 		};
+		17B46FD929AC027F00F32333 /* moovcheck */ = {
+			isa = PBXGroup;
+			children = (
+				17B46FDA29AC027F00F32333 /* main.swift */,
+				17B46FE229AC032C00F32333 /* FolderChecker.swift */,
+				17B46FE029AC02C800F32333 /* MovieChecker.swift */,
+			);
+			path = moovcheck;
+			sourceTree = "<group>";
+		};
 		17FEFED72825D749009EA99E = {
 			isa = PBXGroup;
 			children = (
 				17FEFEE22825D74A009EA99E /* DeInterlacer */,
 				178BC37629A0070500555B21 /* deinterlace */,
+				17B46FD929AC027F00F32333 /* moovcheck */,
 				17FEFEE12825D74A009EA99E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,6 +121,7 @@
 			children = (
 				17FEFEE02825D74A009EA99E /* DeInterlacer.app */,
 				178BC37529A0070500555B21 /* deinterlace */,
+				17B46FD829AC027E00F32333 /* moovcheck */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -135,6 +170,23 @@
 			productReference = 178BC37529A0070500555B21 /* deinterlace */;
 			productType = "com.apple.product-type.tool";
 		};
+		17B46FD729AC027E00F32333 /* moovcheck */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 17B46FDE29AC027F00F32333 /* Build configuration list for PBXNativeTarget "moovcheck" */;
+			buildPhases = (
+				17B46FD429AC027E00F32333 /* Sources */,
+				17B46FD529AC027E00F32333 /* Frameworks */,
+				17B46FD629AC027E00F32333 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = moovcheck;
+			productName = moovcheck;
+			productReference = 17B46FD829AC027E00F32333 /* moovcheck */;
+			productType = "com.apple.product-type.tool";
+		};
 		17FEFEDF2825D74A009EA99E /* DeInterlacer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 17FEFEEF2825D74A009EA99E /* Build configuration list for PBXNativeTarget "DeInterlacer" */;
@@ -165,6 +217,9 @@
 					178BC37429A0070500555B21 = {
 						CreatedOnToolsVersion = 14.2;
 					};
+					17B46FD729AC027E00F32333 = {
+						CreatedOnToolsVersion = 14.2;
+					};
 					17FEFEDF2825D74A009EA99E = {
 						CreatedOnToolsVersion = 13.3.1;
 					};
@@ -185,6 +240,7 @@
 			targets = (
 				17FEFEDF2825D74A009EA99E /* DeInterlacer */,
 				178BC37429A0070500555B21 /* deinterlace */,
+				17B46FD729AC027E00F32333 /* moovcheck */,
 			);
 		};
 /* End PBXProject section */
@@ -210,6 +266,16 @@
 				178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */,
 				178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */,
 				178BC37829A0070500555B21 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B46FD429AC027E00F32333 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17B46FE129AC02C800F32333 /* MovieChecker.swift in Sources */,
+				17B46FE329AC032C00F32333 /* FolderChecker.swift in Sources */,
+				17B46FDB29AC027F00F32333 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -251,6 +317,32 @@
 				DEVELOPMENT_TEAM = 7CHD3H6SYF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				MACOSX_DEPLOYMENT_TARGET = 12.3;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		17B46FDC29AC027F00F32333 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7CHD3H6SYF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.1;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		17B46FDD29AC027F00F32333 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 7CHD3H6SYF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};
@@ -439,6 +531,15 @@
 			buildConfigurations = (
 				178BC37929A0070500555B21 /* Debug */,
 				178BC37A29A0070500555B21 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		17B46FDE29AC027F00F32333 /* Build configuration list for PBXNativeTarget "moovcheck" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17B46FDC29AC027F00F32333 /* Debug */,
+				17B46FDD29AC027F00F32333 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
