@@ -174,7 +174,7 @@ class MovieProcessor
         }
 
         let assetWriter: AVAssetWriter = optionalAssetWriter!
-        assetWriter.shouldOptimizeForNetworkUse = true
+        assetWriter.shouldOptimizeForNetworkUse = false
 
         let optionalAssetReader: AVAssetReader? = try? AVAssetReader(asset: inputAsset)
         if optionalAssetReader == nil {
