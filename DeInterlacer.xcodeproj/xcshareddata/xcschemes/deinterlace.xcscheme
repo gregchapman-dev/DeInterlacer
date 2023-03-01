@@ -31,7 +31,7 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -61,7 +61,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/gregc/Documents/AV\ Workshop /Volumes/GregBackupSSD/AV\ Workshop_deinterlaced"
+            argument = "/Users/gregc/Documents/AV\ Workshop /Volumes/5TB_HFS_Drive/AV\ Workshop_deinterlaced"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

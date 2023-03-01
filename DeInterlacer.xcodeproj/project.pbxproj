@@ -14,6 +14,8 @@
 		178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */; };
 		178BC37F29A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
 		178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */; };
+		17ADACEB29AE865B00AE7E5F /* TrackProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17ADACEA29AE865B00AE7E5F /* TrackProcessor.swift */; };
+		17ADACEC29AE865B00AE7E5F /* TrackProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17ADACEA29AE865B00AE7E5F /* TrackProcessor.swift */; };
 		17B46FDB29AC027F00F32333 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FDA29AC027F00F32333 /* main.swift */; };
 		17B46FE129AC02C800F32333 /* MovieChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FE029AC02C800F32333 /* MovieChecker.swift */; };
 		17B46FE329AC032C00F32333 /* FolderChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B46FE229AC032C00F32333 /* FolderChecker.swift */; };
@@ -50,6 +52,7 @@
 		178BC37529A0070500555B21 /* deinterlace */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = deinterlace; sourceTree = BUILT_PRODUCTS_DIR; };
 		178BC37729A0070500555B21 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameDeinterlacer.swift; sourceTree = "<group>"; };
+		17ADACEA29AE865B00AE7E5F /* TrackProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackProcessor.swift; sourceTree = "<group>"; };
 		17AE2B4C2825E7E200D0E177 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		17B46FD829AC027E00F32333 /* moovcheck */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moovcheck; sourceTree = BUILT_PRODUCTS_DIR; };
 		17B46FDA29AC027F00F32333 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -134,6 +137,7 @@
 				17FEFEE52825D74A009EA99E /* ContentView.swift */,
 				175C3FBA299C3E5B003F0102 /* FolderProcessor.swift */,
 				175C3FB8299C3C8B003F0102 /* MovieProcessor.swift */,
+				17ADACEA29AE865B00AE7E5F /* TrackProcessor.swift */,
 				178BC37E29A2DEA800555B21 /* FrameDeinterlacer.swift */,
 				17FEFEE72825D74A009EA99E /* Assets.xcassets */,
 				17FEFEEC2825D74A009EA99E /* DeInterlacer.entitlements */,
@@ -264,6 +268,7 @@
 			files = (
 				178BC37C29A007D200555B21 /* MovieProcessor.swift in Sources */,
 				178BC37D29A007D200555B21 /* FolderProcessor.swift in Sources */,
+				17ADACEC29AE865B00AE7E5F /* TrackProcessor.swift in Sources */,
 				178BC38029A2DEA800555B21 /* FrameDeinterlacer.swift in Sources */,
 				178BC37829A0070500555B21 /* main.swift in Sources */,
 			);
@@ -287,6 +292,7 @@
 				175C3FBB299C3E5B003F0102 /* FolderProcessor.swift in Sources */,
 				17FEFEE62825D74A009EA99E /* ContentView.swift in Sources */,
 				175C3FB9299C3C8B003F0102 /* MovieProcessor.swift in Sources */,
+				17ADACEB29AE865B00AE7E5F /* TrackProcessor.swift in Sources */,
 				17FEFEE42825D74A009EA99E /* DeInterlacerApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

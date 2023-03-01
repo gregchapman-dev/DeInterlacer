@@ -102,7 +102,7 @@ let waitTask = Task {
         allDone = true
         numRunning = 0
         for mproc in movieProcessors {
-            totalProgress += mproc.movieStatus.progress
+            totalProgress += mproc.getProgress()
             if !mproc.movieStatus.hasCompleted {
                 allDone = false
                 if mproc.movieStatus.hasStarted {
